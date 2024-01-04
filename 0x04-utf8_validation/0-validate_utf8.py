@@ -6,46 +6,29 @@
 
 def validUTF8(data):
     """
-    Initialize a variable to keep track of the number
-    of remaining bytes to read for the current character.
+    Helper function to check if a byte starts with the
+    correct number of leading ones
     """
-    remaining_bytes = 0
 
-    """Iterate through the list of integers."""
+    def is_start_of_utf8(byte):
+        """check the start of byte"""
+        return bin(byte).startswith('0b' + '1' * count + '0')
+    count = 0
     for byte in data:
-        """
-        Check if this byte is the start of a new
-        character.
-        """
-        if remaining_bytes == 0:
-            """
-            Determine the number of leading 1s in the
-            byte to identify the character length.
-            """
-            if byte < 128:
-                remaining_bytes = 0
-            elif byte >= 192 and byte < 224:
-                remaining_bytes = 1
-            elif byte >= 224 and byte < 240:
-                remaining_bytes = 2
-            elif byte >= 240 and byte < 248:
-                remaining_bytes = 3
+        if count == 0:
+            if (byte & 0b10000000) == 0:
+                continue  # Single-byte character, move to the next byte
+            elif (byte & 0b11100000) == 0b11000000:
+                count = 1  # Two-byte character, expect one more byte
+            elif (byte & 0b11110000) == 0b11100000:
+                count = 2  # Three-byte character, expect two more bytes
+            elif (byte & 0b11111000) == 0b11110000:
+                count = 3  # Four-byte character, expect three more bytes
             else:
-                """Invalid start byte."""
-                return False
+                return False  # Invalid leading byte
         else:
-            """
-            Check if the current byte is a continuation
-            byte (starts with 10).
-            """
-            if byte < 128 or byte >= 192:
-                remaining_bytes -= 1
-            else:
-                """Invalid continuation byte."""
-                return False
+            if not is_start_of_utf8(byte):
+                return False  # Invalid continuation byte
+            count -= 1
 
-    """
-    After iterating through all bytes, if there
-    are remaining bytes to read, it's invalid.
-    """
-    return remaining_bytes == 0
+    return count == 0  # All expected continuation bytes found
